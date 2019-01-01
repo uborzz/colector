@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+ 
+  "name": "Tests Uborzz",
+  "version": "0.1",
+  "description": "Pruebas steam submit competitive matches info.",
+ 
+  "content_scripts": [{
+    "css": ["styles.css"],
+    "js": ["colector.js"],
+    "matches": ["http://uborzz.es/"]
+  }]
+ 
+}
