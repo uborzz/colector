@@ -133,10 +133,10 @@ const extractDataFromHtml = () => {
     var match_left = []
     info_left = $("table.csgo_scoreboard_inner_left").last().find("tr > td").not(".csgo_scoreboard_cell_noborder")
     match_left['map'] = $.trim(info_left[0].textContent).replace("Competitive ", "")
-    // formateo fecha a iso y se lo meto a un new Date para sacar timestamp con getTime.
-    match_left['datetime'] = new Date($.trim(info_left[1].textContent).replace(" GMT", "").replace(" ", "T")+"Z").getTime().toString()
-    match_left['wait_time'] = $.trim(info_left[2].textContent).replace("Wait Time: ", "")
-    match_left['duration'] = $.trim(info_left[3].textContent).replace("Match Duration: ", "")
+    // formateo fecha a iso y se lo meto a un new Date para sacar timestamp con getTime. -formato entero
+    match_left['datetime'] = new Date($.trim(info_left[1].textContent).replace(" GMT", "").replace(" ", "T")+"Z").getTime()
+    match_left['wait_time'] = $.trim(info_left[2].textContent).replace("Wait Time: ", "")     // string - Ejemplo: "01:22"
+    match_left['duration'] = $.trim(info_left[3].textContent).replace("Match Duration: ", "") // Ejemplo: "00:58:12"
     if (match_left['duration'].length <= 5) {
       match_left['duration'] = "00:" + match_left['duration']
     }
@@ -146,8 +146,8 @@ const extractDataFromHtml = () => {
 
     // Right Panel - Score 
     var score_text = $("table.csgo_scoreboard_inner_right").last().find("tr > td.csgo_scoreboard_score").text()
-    competitive_matches[i]['score_team1'] = score_text.split(" : ")[0]
-    competitive_matches[i]['score_team2'] = score_text.split(" : ")[1]
+    competitive_matches[i]['score_team1'] = Number(score_text.split(" : ")[0])
+    competitive_matches[i]['score_team2'] = Number(score_text.split(" : ")[1])
 
     var players_team1 = []
     var players_team2 = []
@@ -160,27 +160,27 @@ const extractDataFromHtml = () => {
       } else {
         var player = {}
         player['nick'] = $.trim($( this ).find("td:eq(0)").text())
-        player['steam_id'] = getSteamID($( this ).find("td > div.playerNickname > a")[0].dataset.miniprofile)
-        player['k'] = $.trim($( this ).find("td:eq(2)").text())   // Kills
-        player['a'] = $.trim($( this ).find("td:eq(3)").text())   // Assists
-        player['d'] = $.trim($( this ).find("td:eq(4)").text())   // Deaths
-        var mvps = $.trim($( this ).find("td:eq(5)").text())      // MVPS
+        player['steam_id'] = getSteamID($( this ).find("td > div.playerNickname > a")[0].dataset.miniprofile)   // id como string
+        player['k'] = Number($.trim($( this ).find("td:eq(2)").text()))   // Kills
+        player['a'] = Number($.trim($( this ).find("td:eq(3)").text()))   // Assists
+        player['d'] = Number($.trim($( this ).find("td:eq(4)").text()))   // Deaths
+        var mvps = $.trim($( this ).find("td:eq(5)").text())              // MVPS
         if (mvps == "★") {
-          player['m'] = "1"
+          player['m'] = 1
         } else {
-          player['m'] = mvps.replace("★", "")
+          player['m'] = Number(mvps.replace("★", ""))
         }
-        player['h'] = parseFloat(Number($.trim($( this ).find("td:eq(6)").text()).replace("%", "")) / 100).toFixed(2)   // HSP
-        player['s'] = $.trim($( this ).find("td:eq(7)").text())   // Score
-        player['kdr'] = player['d'] != 0 ? parseFloat(Number(player['k']) / Number(player['d'])).toFixed(2) : "1"
-        player['kadr'] = player['d'] != 0 ? parseFloat((Number(player['k']) + Number(player['a'])) / Number(player['d'])).toFixed(2) : "1"
+        player['h'] = parseFloat(Number($.trim($( this ).find("td:eq(6)").text()).replace("%", "")) / 100).toFixed(2)   // HSP - string (decimal)
+        player['s'] = Number($.trim($( this ).find("td:eq(7)").text()))   // Score
+        player['kdr'] = player['d'] != 0 ? parseFloat(Number(player['k']) / Number(player['d'])).toFixed(2) : "1.00"    // Kill-death Ratio (decimal!! - string)
+        player['kadr'] = player['d'] != 0 ? parseFloat((Number(player['k']) + Number(player['a'])) / Number(player['d'])).toFixed(2) : "1.00" // KillAssist-death Ratio (same)
 
         // Check local team (uploader's team)
         if (uploader_steam_id == player['steam_id']) {
           if (change_team == false) {
-            competitive_matches[i]['local_team'] = "1"
+            competitive_matches[i]['local_team'] = 1
           } else {
-            competitive_matches[i]['local_team'] = "2"
+            competitive_matches[i]['local_team'] = 2
           }
         }
         if (change_team == false){
@@ -197,13 +197,13 @@ const extractDataFromHtml = () => {
     competitive_matches[i]['players_team2'] = players_team2
 
     // Local result: Win - Lose - Tie (W-L-T)
-    if (Number(competitive_matches[i]['score_team1']) > Number(competitive_matches[i]['score_team2']) && competitive_matches[i]['local_team'] == "1") {
+    if (competitive_matches[i]['score_team1'] > competitive_matches[i]['score_team2'] && competitive_matches[i]['local_team'] == 1) {
       competitive_matches[i]['local_result'] = "W"
-    } else if (Number(competitive_matches[i]['score_team2']) > Number(competitive_matches[i]['score_team1']) && competitive_matches[i]['local_team'] == "2") {
+    } else if (competitive_matches[i]['score_team2'] > competitive_matches[i]['score_team1'] && competitive_matches[i]['local_team'] == 2) {
       competitive_matches[i]['local_result'] = "W"
-    } else if (Number(competitive_matches[i]['score_team1']) > Number(competitive_matches[i]['score_team2']) && competitive_matches[i]['local_team'] == "2") {
+    } else if (competitive_matches[i]['score_team1'] > competitive_matches[i]['score_team2'] && competitive_matches[i]['local_team'] == 2) {
       competitive_matches[i]['local_result'] = "L"
-    } else if (Number(competitive_matches[i]['score_team2']) > Number(competitive_matches[i]['score_team1']) && competitive_matches[i]['local_team'] == "1") {
+    } else if (competitive_matches[i]['score_team2'] > competitive_matches[i]['score_team1'] && competitive_matches[i]['local_team'] == 1) {
       competitive_matches[i]['local_result'] = "L"
     } else {
       competitive_matches[i]['local_result'] = "T"      
@@ -213,8 +213,8 @@ const extractDataFromHtml = () => {
 // data to be sent
   return {
     "matches": competitive_matches,
-    "uploader": uploader_steam_id,
-    "timestamp": Date.now()
+    "uploader": uploader_steam_id,  // string
+    "timestamp": Date.now()   // timestamp con milis. Como numero entero.
   }
 }
 
