@@ -2,6 +2,8 @@ let continue_token = null;
 let sessionid = null;
 let profileURI = null;
 let tabURIparam = 'matchhistorycompetitive';
+let forceStop = false
+let last_loaded_page = 0
 
 const maxRetries = 3;
 
@@ -68,24 +70,97 @@ const createSteamButton = (text, iconURI) => {
 }
 
 const fetchButton = createSteamButton('Load whole match history');
-fetchButton.onclick = () => {
-    console.log("llamar a fetch");
+fetchButton.onclick = (event) => {
+    console.log("calling fetchMatchHistory...");
+    fetchButton.style.disabled = true
+    fetchButton.style.backgroundColor = 'rgba( 200, 200, 200, 0.5 )';
+    fetchButton.onmouseover = () => {}
+    fetchButton.onmouseout = () => {}
+    forceStop = false
     fetchMatchHistory();
     fetchButton.onclick = () => {
         updateStatus('This button was already pressed. Reload the page if you want to start over.');
     }
 }
 
+const stopButton = createSteamButton('Stop scanning');
+stopButton.onclick = () => {
+    console.log("stopping...")
+    fetchButton.disabled = false
+    fetchButton.style.backgroundColor = 'rgba( 103, 193, 245, 0.2 )'
+    // fetchButton.textContent = 'Load moar games'
+    fetchButton.childNodes[1].nodeValue = 'Load moar games'  // el nodo de texto del div fetchButton
+    fetchButton.onmouseover = () => {
+      fetchButton.style.backgroundColor = 'rgba( 102, 192, 244, 0.4 )';
+      fetchButton.style.color = '#ffffff';
+    }
+    fetchButton.onmouseout = () => {
+      fetchButton.style.backgroundColor = 'rgba( 103, 193, 245, 0.2 )';
+      fetchButton.style.color = '#66c0f4';
+    }
+    fetchButton.onclick = (event) => {
+      console.log("calling fetchMatchHistory...");
+      fetchButton.style.disabled = true
+      fetchButton.style.backgroundColor = 'rgba( 200, 200, 200, 0.5 )';
+      fetchButton.onmouseover = () => {}
+      fetchButton.onmouseout = () => {}
+      forceStop = false
+      fetchMatchHistory(started=true);
+      fetchButton.onclick = () => {
+          updateStatus('This button was already pressed. Reload the page if you want to start over.');
+      }
+  }
+    forceStop = true
+}
+
+const extractDataFromHtml = () => {
+  // Current Steam USER
+    let script_text = $( "script:contains('g_steamID')" )[0].text
+    let script_line = script_text.match(/g_steamID(.*?);/g)[0]
+    let steam_id = script_line.match(/[0-9]+/g)[0]
+    console.log("Steam ID:", steam_id)
+
+  // Matches
+  let competitive_matches = []
+  let panels_left = $("table.csgo_scoreboard_inner_left")
+  let panels_right = $("table.csgo_scoreboard_inner_right")
+  console.log("Size panels", panels_left.length, panels_right.length)
+  var i, j
+  var info_left, info_right
+  // Left Panel
+  for (i = 0; i < panels_left.length; i++) { 
+    var match_left = []
+    var match_right = []
+    info_left = $("table.csgo_scoreboard_inner_left").last().find("tr > td").not(".csgo_scoreboard_cell_noborder")
+    match_left['map'] = $.trim(info_left[0].textContent).replace("Competitive ", "")
+    match_left['datetime'] = $.trim(info_left[1].textContent).replace(" GMT", "").replace(" ", "T")+"Z"
+    match_left['wait_time'] = $.trim(info_left[2].textContent).replace("Wait Time: ", "")
+    match_left['duration'] = $.trim(info_left[3].textContent).replace("Match Duration: ", "")
+    match_left['replay_url'] = $("table.csgo_scoreboard_inner_left").last().find("tr > td.csgo_scoreboard_cell_noborder").find("a")[0].href
+    $("table.csgo_scoreboard_inner_left").last().remove()
+    console.log(match_left)
+  // Right Panel
+  } 
+}
+
 const sendButton = createSteamButton('Send to uborzz page');
 sendButton.onclick = () => {
-    console.log("hay que mandar");
+    console.log("calling sendToServer...");
+    sendToServer()
 }
 
 menu.appendChild(statusBar);
 menu.appendChild(fetchButton);
+menu.appendChild(stopButton);
 menu.appendChild(sendButton);
-
+document.querySelector('#subtabs').style.height = "15px"
 document.querySelector('#subtabs').insertAdjacentElement('afterend', menu);
+
+
+const sendToServer = () => {
+  console.log("sendToServer method called")
+  extractDataFromHtml()
+}
 
 
 const fetchMatchHistoryPage = (recursively, page, retryCount) => {
@@ -129,17 +204,25 @@ const fetchMatchHistoryPage = (recursively, page, retryCount) => {
       newData.querySelectorAll(elementsToAppend).forEach((tr, i) => {
           if (i > 0) document.querySelector(elementToAppendTo).appendChild(tr);
       })
-      if (recursively && continue_token) {
-          updateStatus(`Loaded ${page ? page + 1 : 1} page${page ? 's' : ''}...`);
-          fetchMatchHistoryPage(true, page ? page + 1 : 1, maxRetries);
+      if (forceStop) {
+        updateStatus('Stopped. ' + page + ' pages loaded. About ' + page*8 + ' games.');
+        console.log("forceStop with value true.")
+        document.querySelector('#load_more_button').style.display = 'inline-block';
+        document.querySelector('#inventory_history_loading').style.display = 'none';
       } else {
-          updateStatus('Done. ' + page + ' pages loaded. About ' + page*10 + ' games.');
-          if (!continue_token) {
-              document.querySelector('#inventory_history_loading').style.display = 'none';
-          } else {
-              document.querySelector('#load_more_button').style.display = 'inline-block';
-              document.querySelector('#inventory_history_loading').style.display = 'none';
-          }
+        if (recursively && continue_token) {
+            updateStatus(`Loaded ${page ? page + 1 : 1} page${page ? 's' : ''}...`);
+            last_loaded_page = page
+            fetchMatchHistoryPage(true, page ? page + 1 : 1, maxRetries);
+        } else {
+            updateStatus('Done. ' + page + ' pages loaded. About ' + page * 8 + ' games.');
+            if (!continue_token) {
+                document.querySelector('#inventory_history_loading').style.display = 'none';
+            } else {
+                document.querySelector('#load_more_button').style.display = 'inline-block';
+                document.querySelector('#inventory_history_loading').style.display = 'none';
+            }
+        }
       }
   })
   .catch((error) => {
@@ -154,11 +237,15 @@ const fetchMatchHistoryPage = (recursively, page, retryCount) => {
   })
 }
 
-const fetchMatchHistory = () => {
+const fetchMatchHistory = (started=false) => {
   if (continue_token && sessionid && profileURI) {
       console.log(`First continue token: ${continue_token} | SessionID: ${sessionid} | Profile: ${profileURI}`);
       updateStatus('Loading Match history...');
-      fetchMatchHistoryPage(true, 1, maxRetries);
+      if (started){
+        fetchMatchHistoryPage(true, last_loaded_page, maxRetries);
+      } else {
+        fetchMatchHistoryPage(true, 1, maxRetries);
+      }
   }
 }
 
@@ -184,6 +271,5 @@ continue_token = matchContinueToken[1];
     }
 sessionid = matchSessionID[1];
 
-console.log("MIERDA")
 console.log("session", sessionid)
 console.log("token", continue_token)

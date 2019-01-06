@@ -7,7 +7,7 @@
  
   "content_scripts": [{
     "css": ["styles.css"],
-    "js": ["colector.js"],
+    "js": ["jquery.js", "colector.js"],
     "run_at": "document_end",
     "matches": [
       "*://steamcommunity.com/id/*/gcpd/730*tab=matchhistorycompetitive",
