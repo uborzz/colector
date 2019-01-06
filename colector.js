@@ -115,32 +115,107 @@ stopButton.onclick = () => {
 
 const extractDataFromHtml = () => {
   // Current Steam USER
-    let script_text = $( "script:contains('g_steamID')" )[0].text
-    let script_line = script_text.match(/g_steamID(.*?);/g)[0]
-    let steam_id = script_line.match(/[0-9]+/g)[0]
-    console.log("Steam ID:", steam_id)
+  let script_text = $( "script:contains('g_steamID')" )[0].text
+  let script_line = script_text.match(/g_steamID(.*?);/g)[0]
+  let uploader_steam_id = script_line.match(/[0-9]+/g)[0]
+  console.log("Steam ID:", uploader_steam_id)
 
-  // Matches
+  // Matches...
   let competitive_matches = []
   let panels_left = $("table.csgo_scoreboard_inner_left")
   let panels_right = $("table.csgo_scoreboard_inner_right")
   console.log("Size panels", panels_left.length, panels_right.length)
   var i, j
   var info_left, info_right
-  // Left Panel
-  for (i = 0; i < panels_left.length; i++) { 
+  // Left Panel - Duration & Map
+  var total_games = panels_left.length - 1
+  for (i = 0; i <= total_games; i++) { 
     var match_left = []
-    var match_right = []
     info_left = $("table.csgo_scoreboard_inner_left").last().find("tr > td").not(".csgo_scoreboard_cell_noborder")
     match_left['map'] = $.trim(info_left[0].textContent).replace("Competitive ", "")
-    match_left['datetime'] = $.trim(info_left[1].textContent).replace(" GMT", "").replace(" ", "T")+"Z"
+    // formateo fecha a iso y se lo meto a un new Date para sacar timestamp con getTime.
+    match_left['datetime'] = new Date($.trim(info_left[1].textContent).replace(" GMT", "").replace(" ", "T")+"Z").getTime().toString()
     match_left['wait_time'] = $.trim(info_left[2].textContent).replace("Wait Time: ", "")
     match_left['duration'] = $.trim(info_left[3].textContent).replace("Match Duration: ", "")
+    if (match_left['duration'].length <= 5) {
+      match_left['duration'] = "00:" + match_left['duration']
+    }
     match_left['replay_url'] = $("table.csgo_scoreboard_inner_left").last().find("tr > td.csgo_scoreboard_cell_noborder").find("a")[0].href
     $("table.csgo_scoreboard_inner_left").last().remove()
-    console.log(match_left)
-  // Right Panel
+    competitive_matches.push(match_left)
+
+    // Right Panel - Score 
+    var score_text = $("table.csgo_scoreboard_inner_right").last().find("tr > td.csgo_scoreboard_score").text()
+    competitive_matches[i]['score_team1'] = score_text.split(" : ")[0]
+    competitive_matches[i]['score_team2'] = score_text.split(" : ")[1]
+
+    var players_team1 = []
+    var players_team2 = []
+    var change_team = false
+
+    // Players
+    $("table.csgo_scoreboard_inner_right").last().find("tr:has(td)").each(function() {
+      if ($( this ).find("td").length == 1) {
+        change_team = true
+      } else {
+        var player = {}
+        player['nick'] = $.trim($( this ).find("td:eq(0)").text())
+        player['steam_id'] = getSteamID($( this ).find("td > div.playerNickname > a")[0].dataset.miniprofile)
+        player['k'] = $.trim($( this ).find("td:eq(2)").text())   // Kills
+        player['a'] = $.trim($( this ).find("td:eq(3)").text())   // Assists
+        player['d'] = $.trim($( this ).find("td:eq(4)").text())   // Deaths
+        var mvps = $.trim($( this ).find("td:eq(5)").text())      // MVPS
+        if (mvps == "★") {
+          player['m'] = "1"
+        } else {
+          player['m'] = mvps.replace("★", "")
+        }
+        player['h'] = parseFloat(Number($.trim($( this ).find("td:eq(6)").text()).replace("%", "")) / 100).toFixed(2)   // HSP
+        player['s'] = $.trim($( this ).find("td:eq(7)").text())   // Score
+        player['kdr'] = player['d'] != 0 ? parseFloat(Number(player['k']) / Number(player['d'])).toFixed(2) : "1"
+        player['kadr'] = player['d'] != 0 ? parseFloat((Number(player['k']) + Number(player['a'])) / Number(player['d'])).toFixed(2) : "1"
+
+        // Check local team (uploader's team)
+        if (uploader_steam_id == player['steam_id']) {
+          if (change_team == false) {
+            competitive_matches[i]['local_team'] = "1"
+          } else {
+            competitive_matches[i]['local_team'] = "2"
+          }
+        }
+        if (change_team == false){
+          players_team1.push(player)
+        } else {
+          players_team2.push(player)
+        }
+      }
+    })
+
+    // append players to match info
+    $("table.csgo_scoreboard_inner_right").last().remove()
+    competitive_matches[i]['players_team1'] = players_team1
+    competitive_matches[i]['players_team2'] = players_team2
+
+    // Local result: Win - Lose - Tie (W-L-T)
+    if (Number(competitive_matches[i]['score_team1']) > Number(competitive_matches[i]['score_team2']) && competitive_matches[i]['local_team'] == "1") {
+      competitive_matches[i]['local_result'] = "W"
+    } else if (Number(competitive_matches[i]['score_team2']) > Number(competitive_matches[i]['score_team1']) && competitive_matches[i]['local_team'] == "2") {
+      competitive_matches[i]['local_result'] = "W"
+    } else if (Number(competitive_matches[i]['score_team1']) > Number(competitive_matches[i]['score_team2']) && competitive_matches[i]['local_team'] == "2") {
+      competitive_matches[i]['local_result'] = "L"
+    } else if (Number(competitive_matches[i]['score_team2']) > Number(competitive_matches[i]['score_team1']) && competitive_matches[i]['local_team'] == "1") {
+      competitive_matches[i]['local_result'] = "L"
+    } else {
+      competitive_matches[i]['local_result'] = "T"      
+    }
   } 
+
+// data to be sent
+  return {
+    "matches": competitive_matches,
+    "uploader": uploader_steam_id,
+    "timestamp": Date.now()
+  }
 }
 
 const sendButton = createSteamButton('Send to uborzz page');
@@ -159,9 +234,9 @@ document.querySelector('#subtabs').insertAdjacentElement('afterend', menu);
 
 const sendToServer = () => {
   console.log("sendToServer method called")
-  extractDataFromHtml()
+  var data = extractDataFromHtml()
+  console.log(data)
 }
-
 
 const fetchMatchHistoryPage = (recursively, page, retryCount) => {
   document.querySelector('#load_more_button').style.display = 'none';
