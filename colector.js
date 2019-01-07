@@ -35,7 +35,8 @@ endpointTextBar.type = 'text';
 endpointTextBar.style.marginLeft = '5px';
 endpointTextBar.style.marginRight = '30px';
 endpointTextBar.style.backgroundColor = "rgba(204, 204, 204, 0.2)";
-endpointTextBar.value = "http://csgo.uborzz.es/uploadgames"
+// endpointTextBar.value = "http://csgo.uborzz.es/uploadgames"
+endpointTextBar.value = "https://ptsv2.com/t/t85qj-1546877310/post"
 endpointTextBar.style.width = "320px";
 endpointTextBar.style.color = "#ffffff";
 endpointTextBar.style.textAlign = 'center';
@@ -173,7 +174,7 @@ const extractDataFromHtml = () => {
   // Left Panel - Duration & Map
   var total_games = panels_left.length - 1
   for (i = 0; i <= total_games; i++) { 
-    var match_left = []
+    var match_left = {}
     info_left = $("table.csgo_scoreboard_inner_left").last().find("tr > td").not(".csgo_scoreboard_cell_noborder")
     match_left['map'] = $.trim(info_left[0].textContent).replace("Competitive ", "")
     // formateo fecha a iso y se lo meto a un new Date para sacar timestamp con getTime. -formato entero
@@ -305,16 +306,38 @@ menu.appendChild(sendButton);
 document.querySelector('#subtabs').style.height = "15px"
 document.querySelector('#subtabs').insertAdjacentElement('afterend', menu);
 
-
 const sendToEndpoint = () => {
     console.log("sendToServer method called")
     var competitive_data = extractDataFromHtml()
-    console.log("Data extracted from html:", competitive_data)
-    $.post( endpointTextBar.value,
-            competitive_data,
-            (data) => { console.log(data)
-                        statusBar.textContent = data['status']},
-            "json");
+    var json_data = JSON.stringify(competitive_data)
+    console.log("Data extracted from html:", json_data)
+    
+    // var settings = {
+    //     "url": endpointTextBar.value,
+    //     "method": "POST",
+    //     "timeout": 0,
+    //     // "contentType": 'applications/json; charset=UTF-8',
+    //     "dataType": 'json',
+    //     "data": JSON.stringify(competitive_data)
+    // };
+    // $.ajax(settings).done(function (response) {
+    //     console.log(response);
+    // });
+
+    fetch(endpointTextBar.value, {
+        method: 'POST',
+        mode: "no-cors", // no-cors, cors, *same-origin
+        cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+        headers : {
+            "Content-Type": "application/json",
+            // "Content-Type": "application/x-www-form-urlencoded",
+        },
+        referrer: "no-referrer", // no-referrer, *client
+        body: json_data
+    }).then((res) => res.json())
+    .then((data) =>  console.log(data))
+    .catch((err)=>console.log(err))
+
 }
 
 const fetchMatchHistoryPage = (recursively, page, retryCount) => {
