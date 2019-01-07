@@ -14,7 +14,7 @@ function getSteamID (minProfile) {
 const statusBar = document.createElement('div');
 statusBar.style.margin = '8px 0';
 statusBar.style.whiteSpace = 'pre-wrap';
-statusBar.textContent = "Saludos dama oOoOo caballero."
+statusBar.textContent = "Saludos dama OoOoooOoOo caballero!"
 const updateStatus = (text, accumulate) => {
     if (accumulate) {
         statusBar.textContent = statusBar.textContent + '\n' + text;
@@ -22,6 +22,48 @@ const updateStatus = (text, accumulate) => {
         statusBar.textContent = text;
     }
 }
+
+const textBars = document.createElement('div');
+textBars.style.margin = '8px 14px';
+textBars.style.whiteSpace = 'pre-wrap';
+textBars.style.textAlign = 'center';
+
+const endpointTextBar = document.createElement('input');
+endpointTextBar.id = 'endp-box';
+endpointTextBar.name = 'endp-box';
+endpointTextBar.type = 'text';
+endpointTextBar.style.marginLeft = '5px';
+endpointTextBar.style.marginRight = '30px';
+endpointTextBar.style.backgroundColor = "rgba(204, 204, 204, 0.2)";
+endpointTextBar.value = "http://csgo.uborzz.es/uploadgames"
+endpointTextBar.style.width = "320px";
+endpointTextBar.style.color = "#ffffff";
+endpointTextBar.style.textAlign = 'center';
+
+const passwordTextBar = document.createElement('input');
+passwordTextBar.id = 'pass-box';
+passwordTextBar.name = 'pass-box';
+passwordTextBar.type = 'text';
+passwordTextBar.style.marginLeft = '5px';
+passwordTextBar.style.marginRight = '30px';
+passwordTextBar.style.backgroundColor = "rgba(204, 204, 204, 0.2)";
+passwordTextBar.style.width = "90px";
+passwordTextBar.style.color = "#ffffff";
+passwordTextBar.style.textAlign = 'center';
+
+const endpointLabel = document.createElement("label");
+endpointLabel.htmlFor = "endp-box";
+endpointLabel.innerHTML = "Endpoint";
+
+const passwordLabel = document.createElement("label");
+passwordLabel.htmlFor = "pass-box";
+passwordLabel.innerHTML = "Password";
+
+textBars.appendChild(endpointLabel);
+textBars.appendChild(endpointTextBar);
+textBars.appendChild(passwordLabel);
+textBars.appendChild(passwordTextBar);
+
 
 const menu = document.createElement('div');
 menu.style.padding = '0 14px';
@@ -72,7 +114,7 @@ const createSteamButton = (text, iconURI) => {
 const fetchButton = createSteamButton('Load whole match history');
 fetchButton.onclick = (event) => {
     console.log("calling fetchMatchHistory...");
-    fetchButton.style.disabled = true
+    fetchButton.disabled = true
     fetchButton.style.backgroundColor = 'rgba( 200, 200, 200, 0.5 )';
     fetchButton.onmouseover = () => {}
     fetchButton.onmouseout = () => {}
@@ -88,6 +130,7 @@ stopButton.onclick = () => {
     console.log("stopping...")
     fetchButton.disabled = false
     fetchButton.style.backgroundColor = 'rgba( 103, 193, 245, 0.2 )'
+    fetchButton.style.color = '#66c0f4';
     // fetchButton.textContent = 'Load moar games'
     fetchButton.childNodes[1].nodeValue = 'Load moar games'  // el nodo de texto del div fetchButton
     fetchButton.onmouseover = () => {
@@ -100,7 +143,7 @@ stopButton.onclick = () => {
     }
     fetchButton.onclick = (event) => {
       console.log("calling fetchMatchHistory...");
-      fetchButton.style.disabled = true
+      fetchButton.disabled = true
       fetchButton.style.backgroundColor = 'rgba( 200, 200, 200, 0.5 )';
       fetchButton.onmouseover = () => {}
       fetchButton.onmouseout = () => {}
@@ -140,7 +183,10 @@ const extractDataFromHtml = () => {
     if (match_left['duration'].length <= 5) {
       match_left['duration'] = "00:" + match_left['duration']
     }
-    match_left['replay_url'] = $("table.csgo_scoreboard_inner_left").last().find("tr > td.csgo_scoreboard_cell_noborder").find("a")[0].href
+    try {
+        match_left['replay_url'] = $("table.csgo_scoreboard_inner_left").last().find("tr > td.csgo_scoreboard_cell_noborder").find("a")[0].href
+    }
+    catch (TypeError) {}
     $("table.csgo_scoreboard_inner_left").last().remove()
     competitive_matches.push(match_left)
 
@@ -218,11 +264,39 @@ const extractDataFromHtml = () => {
   }
 }
 
-const sendButton = createSteamButton('Send to uborzz page');
+const sendButton = createSteamButton('Send to endpoint');
 sendButton.onclick = () => {
     console.log("calling sendToServer...");
-    sendToServer()
+    statusBar.textContent = "Sending data to endpoint..."
+    
+    endpointTextBar.disabled = true
+    endpointTextBar.style.color = "#909090"
+    
+    passwordTextBar.disabled = true
+    passwordTextBar.value = ""
+    
+    fetchButton.disabled = true
+    fetchButton.onmouseover = () => {}
+    fetchButton.onmouseout = () => {}
+    fetchButton.onclick = () => {updateStatus('Reload the page if you want to start over.')}
+    fetchButton.style.backgroundColor = 'rgba( 200, 200, 200, 0.5 )';
+    
+    stopButton.disabled = true
+    stopButton.onmouseover = () => {}
+    stopButton.onmouseout = () => {}
+    stopButton.onclick = () => {updateStatus('Reload the page if you want to start over.')}
+    stopButton.style.backgroundColor = 'rgba( 200, 200, 200, 0.5 )';
+
+    sendButton.disabled = true
+    sendButton.onmouseover = () => {}
+    sendButton.onmouseout = () => {}
+    sendButton.onclick = () => {updateStatus('Reload the page if you want to start over.')}
+    sendButton.style.backgroundColor = 'rgba( 200, 200, 200, 0.5 )';
+
+    sendToEndpoint()
 }
+
+document.querySelector('#subtabs').insertAdjacentElement('afterend', textBars);
 
 menu.appendChild(statusBar);
 menu.appendChild(fetchButton);
@@ -232,10 +306,15 @@ document.querySelector('#subtabs').style.height = "15px"
 document.querySelector('#subtabs').insertAdjacentElement('afterend', menu);
 
 
-const sendToServer = () => {
-  console.log("sendToServer method called")
-  var data = extractDataFromHtml()
-  console.log(data)
+const sendToEndpoint = () => {
+    console.log("sendToServer method called")
+    var competitive_data = extractDataFromHtml()
+    console.log("Data extracted from html:", competitive_data)
+    $.post( endpointTextBar.value,
+            competitive_data,
+            (data) => { console.log(data)
+                        statusBar.textContent = data['status']},
+            "json");
 }
 
 const fetchMatchHistoryPage = (recursively, page, retryCount) => {
