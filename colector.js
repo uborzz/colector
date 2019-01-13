@@ -14,7 +14,6 @@ function getSteamID (minProfile) {
 const statusBar = document.createElement('div');
 statusBar.style.margin = '8px 0';
 statusBar.style.whiteSpace = 'pre-wrap';
-statusBar.textContent = "Saludos dama OoOoooOoOo caballero!"
 const updateStatus = (text, accumulate) => {
     if (accumulate) {
         statusBar.textContent = statusBar.textContent + '\n' + text;
@@ -22,6 +21,7 @@ const updateStatus = (text, accumulate) => {
         statusBar.textContent = text;
     }
 }
+updateStatus("Hi there!")
 
 const textBars = document.createElement('div');
 textBars.style.margin = '8px 14px';
@@ -35,8 +35,7 @@ endpointTextBar.type = 'text';
 endpointTextBar.style.marginLeft = '5px';
 endpointTextBar.style.marginRight = '30px';
 endpointTextBar.style.backgroundColor = "rgba(204, 204, 204, 0.2)";
-// endpointTextBar.value = "http://csgo.uborzz.es/uploadgames"
-endpointTextBar.value = "https://ptsv2.com/t/t85qj-1546877310/post"
+endpointTextBar.value = "Set your endpoint."
 endpointTextBar.style.width = "320px";
 endpointTextBar.style.color = "#ffffff";
 endpointTextBar.style.textAlign = 'center';
@@ -268,13 +267,13 @@ const extractDataFromHtml = () => {
 const sendButton = createSteamButton('Send to endpoint');
 sendButton.onclick = () => {
     console.log("calling sendToServer...");
-    statusBar.textContent = "Sending data to endpoint..."
+    updateStatus("Sending data to endpoint... Please wait... (aprox. 1 second for 10 pages.)")
     
     endpointTextBar.disabled = true
     endpointTextBar.style.color = "#909090"
     
     passwordTextBar.disabled = true
-    passwordTextBar.value = ""
+    // passwordTextBar.value = ""
     
     fetchButton.disabled = true
     fetchButton.onmouseover = () => {}
@@ -324,9 +323,12 @@ const sendToEndpoint = () => {
     //     console.log(response);
     // });
 
-    fetch(endpointTextBar.value, {
+    var url_with_args = endpointTextBar.value + "?password=" + passwordTextBar.value
+    passwordTextBar.value = ""
+    fetch(url_with_args, {
         method: 'POST',
-        mode: "no-cors", // no-cors, cors, *same-origin
+        // mode: "cors",
+        mode: "no-cors", // las respuestas llegan opaques
         cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
         headers : {
             "Content-Type": "application/json",
@@ -334,9 +336,37 @@ const sendToEndpoint = () => {
         },
         referrer: "no-referrer", // no-referrer, *client
         body: json_data
-    }).then((res) => res.json())
-    .then((data) =>  console.log(data))
-    .catch((err)=>console.log(err))
+    }).then((res) => {
+        console.log(res)
+        if (res.type == "opaque") {
+            var texto_error = "Response opaque from endpoint. Trabajando en ello, tendrás que mirar en tu servidor si se han insertado los datos."
+            throw Error(texto_error)
+        } else if (res.ok) {
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                return res.json();
+            } else {
+                return res.text();
+            }
+        } else {
+            throw Error(`Response status not OK: ${res.status}.`)
+        }
+    })
+    .then((json) => {
+        console.log(json)
+        if (!json.success) {
+            throw Error(`No valid json data received from ${endpointTextBar.value}`);
+        }
+        if (json.result == "error") {
+            throw Error(`Uh, problems... ${json.description}`);
+        }
+        updateStatus(`OK! total sent: ${json.total}, inserted: ${json.inserted}. Some matches could have been already uploaded by other player.`)
+        console.log(json)
+    })
+    .catch((err) => {
+        updateStatus(err + '.. Para reintentar envío, reload & retry.')
+        console.log(err)
+    })
 
 }
 
@@ -382,7 +412,7 @@ const fetchMatchHistoryPage = (recursively, page, retryCount) => {
           if (i > 0) document.querySelector(elementToAppendTo).appendChild(tr);
       })
       if (forceStop) {
-        updateStatus('Stopped. ' + page + ' pages loaded. About ' + page*8 + ' games.');
+        updateStatus('Stopped. ' + page + ' pages loaded. About ' + (page+1)*8 + ' games.');
         console.log("forceStop with value true.")
         document.querySelector('#load_more_button').style.display = 'inline-block';
         document.querySelector('#inventory_history_loading').style.display = 'none';
