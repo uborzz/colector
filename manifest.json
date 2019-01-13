@@ -1,10 +1,13 @@
 {
   "manifest_version": 2,
  
-  "name": "Tests Uborzz",
-  "version": "0.2",
-  "description": "Pruebas steam submit competitive matches info.",
- 
+  "name": "CSGO Competitive: 'MatchineGun'",
+  "version": "0.3",
+  "description": "Tool for sending competitive matches data from steam personal game data page to custom endpoint in Json format.",
+  "author": "uborZz",
+  "icons": {
+   "128": "icon.png" 
+  },
   "content_scripts": [{
     "css": ["styles.css"],
     "js": ["jquery.js", "colector.js"],
