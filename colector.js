@@ -21,7 +21,7 @@ const updateStatus = (text, accumulate) => {
         statusBar.textContent = text;
     }
 }
-updateStatus("Hi there!")
+updateStatus("Welcome! This section contains the MatchineGun menu.")
 
 const textBars = document.createElement('div');
 textBars.style.margin = '8px 14px';
@@ -64,11 +64,22 @@ textBars.appendChild(endpointTextBar);
 textBars.appendChild(passwordLabel);
 textBars.appendChild(passwordTextBar);
 
-
 const menu = document.createElement('div');
 menu.style.padding = '0 14px';
-menu.id = 'banchecker-menu';
+menu.id = 'matchinegun-menu';
 menu.style.textAlign = 'center';
+
+
+const privacy_policy = document.createElement("div");
+privacy_policy.id = 'privacypolicy';
+privacy_policy.style.textAlign = 'center';
+
+var privPolicyLink = "https://sites.google.com/view/matchinegun-privacy-policy"
+const priv_text = document.createElement("label");
+priv_text.htmlFor = "privacypolicy-text";
+priv_text.innerHTML = "By using this extension you accept the "+  '<a href="'+privPolicyLink+'" target=_blank>privacy policy.</a>';
+
+privacy_policy.appendChild(priv_text);
 
 const createSteamButton = (text, iconURI) => {
     const button = document.createElement('div');
@@ -175,7 +186,7 @@ const extractDataFromHtml = () => {
   for (i = 0; i <= total_games; i++) { 
     var match_left = {}
     info_left = $("table.csgo_scoreboard_inner_left").last().find("tr > td").not(".csgo_scoreboard_cell_noborder")
-    match_left['map'] = $.trim(info_left[0].textContent).replace("Competitive ", "")
+    match_left['map'] = $.trim(info_left[0].textContent).split(" ").slice(1).join(" ")
     // formateo fecha a iso y se lo meto a un new Date para sacar timestamp con getTime. -formato entero
     match_left['datetime'] = new Date($.trim(info_left[1].textContent).replace(" GMT", "").replace(" ", "T")+"Z").getTime()
     match_left['wait_time'] = $.trim(info_left[2].textContent).replace("Wait Time: ", "")     // string - Ejemplo: "01:22"
@@ -296,6 +307,7 @@ sendButton.onclick = () => {
     sendToEndpoint()
 }
 
+document.querySelector('#subtabs').insertAdjacentElement('afterend', privacy_policy);
 document.querySelector('#subtabs').insertAdjacentElement('afterend', textBars);
 
 menu.appendChild(statusBar);
@@ -339,7 +351,7 @@ const sendToEndpoint = () => {
     }).then((res) => {
         console.log(res)
         if (res.type == "opaque") {
-            var texto_error = "Response opaque from endpoint. Trabajando en ello, tendrás que mirar en tu servidor si se han insertado los datos."
+            var texto_error = "Response opaque from endpoint. Working on it, check your server."
             throw Error(texto_error)
         } else if (res.ok) {
             const contentType = res.headers.get("content-type");
