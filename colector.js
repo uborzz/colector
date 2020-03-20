@@ -339,8 +339,8 @@ const sendToEndpoint = () => {
     passwordTextBar.value = ""
     fetch(url_with_args, {
         method: 'POST',
-        // mode: "cors",
-        mode: "no-cors", // las respuestas llegan opaques
+        mode: "cors",
+        //mode: "no-cors", // las respuestas llegan opaques
         cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
         headers : {
             "Content-Type": "application/json",
@@ -365,15 +365,12 @@ const sendToEndpoint = () => {
         }
     })
     .then((json) => {
-        console.log(json)
-        if (!json.success) {
-            throw Error(`No valid json data received from ${endpointTextBar.value}`);
-        }
-        if (json.result == "error") {
+        if (json.result != "OK") {
             throw Error(`Uh, problems... ${json.description}`);
+        } else {
+            console.log(json)
+            updateStatus(`OK! total sent: ${json.total}, inserted: ${json.inserted}. Some matches could have been already uploaded by other player.`)
         }
-        updateStatus(`OK! total sent: ${json.total}, inserted: ${json.inserted}. Some matches could have been already uploaded by other player.`)
-        console.log(json)
     })
     .catch((err) => {
         updateStatus(err + '.. Para reintentar envío, reload & retry.')
