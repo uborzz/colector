@@ -2,7 +2,7 @@
   "manifest_version": 2,
   
   "name": "CSGO Competitive: 'MatchineGun'",
-  "version": "0.7",
+  "version": "0.9",
   "description": "Tool for sending competitive matches data from steam personal game data page to custom endpoint in Json format.",
   "author": "uborZz",
   "icons": {
@@ -16,6 +16,8 @@
       "*://steamcommunity.com/id/*/gcpd/730*tab=matchhistorycompetitive",
       "*://steamcommunity.com/profiles/*/gcpd/730*tab=matchhistorycompetitive"
     ]
-  }]
- 
+  }],
+  "permissions": [
+    "storage"
+  ]
 }

@@ -43,7 +43,7 @@ endpointTextBar.style.textAlign = 'center';
 const passwordTextBar = document.createElement('input');
 passwordTextBar.id = 'pass-box';
 passwordTextBar.name = 'pass-box';
-passwordTextBar.type = 'text';
+passwordTextBar.type = "password";
 passwordTextBar.style.marginLeft = '5px';
 passwordTextBar.style.marginRight = '30px';
 passwordTextBar.style.backgroundColor = "rgba(204, 204, 204, 0.2)";
@@ -58,6 +58,17 @@ endpointLabel.innerHTML = "Endpoint";
 const passwordLabel = document.createElement("label");
 passwordLabel.htmlFor = "pass-box";
 passwordLabel.innerHTML = "Password";
+
+try {
+  chrome.storage.local.get(['mgpass', 'mgendpoint'], function(data) {
+    if (data.mgpass) {
+      passwordTextBar.value = data.mgpass
+      endpointTextBar.value = data.mgendpoint
+    }
+  });
+} catch {console.log('Shit happend')}
+
+
 
 textBars.appendChild(endpointLabel);
 textBars.appendChild(endpointTextBar);
@@ -275,8 +286,22 @@ const extractDataFromHtml = () => {
   }
 }
 
+function save_options() {
+  let url = document.getElementsByName('endp-box')[0].value
+  let pass = document.getElementsByName('pass-box')[0].value
+  let matchinegun_config = {
+      'mgendpoint': url,
+      'mgpass': pass,
+  }
+  chrome.storage.local.set(matchinegun_config, function() {
+      console.log("saved");
+  });
+}
+
 const sendButton = createSteamButton('Send to endpoint');
 sendButton.onclick = () => {
+    console.log("saving settings");
+    save_options()
     console.log("calling sendToServer...");
     updateStatus("Sending data to endpoint... Please wait... (aprox. 1 second for 10 pages.)")
     
@@ -336,7 +361,6 @@ const sendToEndpoint = () => {
     // });
 
     var url_with_args = endpointTextBar.value + "?password=" + passwordTextBar.value
-    passwordTextBar.value = ""
     fetch(url_with_args, {
         method: 'POST',
         mode: "cors",
